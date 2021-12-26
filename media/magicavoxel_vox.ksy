@@ -17,15 +17,16 @@ seq:
     contents: 'VOX '
   - id: version
     type: u4
-    doc: 150 expected
+    doc: 200 expected
   - id: main
     type: chunk
 types:
   chunk:
     seq:
       - id: chunk_id
-        type: u4be
-        enum: chunk_type
+        type: str
+        encoding: ASCII
+        size: 4
       - id: num_bytes_of_chunk_content
         type: u4
       - id: num_bytes_of_children_chunks
@@ -36,11 +37,19 @@ types:
         type:
           switch-on: chunk_id
           cases:
-            'chunk_type::pack': pack
-            'chunk_type::size': size
-            'chunk_type::xyzi': xyzi
-            'chunk_type::rgba': rgba
-            'chunk_type::matt': matt
+            '"PACK"': pack
+            '"SIZE"': size
+            '"XYZI"': xyzi
+            '"RGBA"': rgba
+            '"MATT"': matt
+            '"nTRN"': ntrn
+            '"nGRP"': ngrp
+            '"nSHP"': nshp
+            '"LAYR"': layr
+            '"rCAM"': rcam
+            '"NOTE"': note
+            '"rOBJ"': robj
+            '"MATL"': matl
       - id: children_chunks
         if: num_bytes_of_children_chunks != 0
         type: chunk
@@ -71,6 +80,88 @@ types:
         type: color
         repeat: expr
         repeat-expr: 256
+  ntrn:
+    seq:
+      - id: node_id
+        type: u4
+      - id: dict
+        type: dict
+      - id: child_node_id
+        type: u4
+      - id: reservered_id
+        type: u4
+      - id: layer_id
+        type: u4
+      - id: num_of_frames
+        type: u4
+  ngrp:
+    seq:
+      - id: node_id
+        type: u4
+      - id: dict
+        type: dict
+      - id: num_child_nodes
+        type: u4
+      - id: child_node_id
+        type: u4
+        repeat: expr
+        repeat-expr: num_child_nodes
+  nshp:
+    seq:
+      - id: node_id
+        type: u4
+      - id: dict
+        type: dict
+      - id: num_of_models
+        type: u4
+      - id: model
+        type: model
+        repeat: expr
+        repeat-expr: num_of_models
+  model:
+    seq:
+      - id: model_id
+        type: u4
+      - id: dict
+        type: dict
+  
+  dict:
+    seq:
+      - id: count
+        type: u4
+      - id: vals
+        type: dict_val
+        repeat: expr
+        repeat-expr: count
+        
+  dict_val:
+    seq:
+      - id: key_length
+        type: u4
+      - id: key
+        type: str
+        size: key_length
+        encoding: ASCII
+      - id: value_length
+        type: u4
+      - id: value
+        type: str
+        size: value_length
+        encoding: ASCII
+  dict_float:
+    seq:
+      - id: size
+        type: u4
+      - id: val
+        size: size
+  dict_str:
+    seq:
+      - id: size
+        type: u4
+      - id: val
+        type: str
+        encoding: ASCII
+        size: size
   voxel:
     seq:
       - id: x
@@ -91,6 +182,46 @@ types:
         type: u1
       - id: a
         type: u1
+  layr:
+    seq:
+      - id: layer_id
+        type: u4
+      - id: layer_attributes
+        type: dict
+      - id: reserved_id
+        type: s4
+  robj:
+    seq:
+      - id: dict
+        type: dict
+  rcam:
+    seq:
+      - id: camera_id
+        type: u4
+      - id: dict
+        type: dict
+  note:
+    seq:
+      - id: num_of_color_names
+        type: u4
+      - id: color_name
+        type: color_name
+        repeat: expr
+        repeat-expr: num_of_color_names
+  color_name:
+    seq:
+      - id: size
+        type: u4
+      - id: value
+        type: str
+        size: size
+        encoding: ASCII
+  matl:
+    seq:
+      - id: mateiral_id
+        type: u4
+      - id: material_properties
+        type: dict
   matt:
     seq:
       - id: id
@@ -146,13 +277,6 @@ types:
       has_is_total_power:
         value: '(property_bits & 128) != 0'
 enums:
-  chunk_type:
-    0x4d41494e: main
-    0x5041434b: pack
-    0x53495a45: size
-    0x58595a49: xyzi
-    0x52474241: rgba
-    0x4d415454: matt
   material_type:
     0: diffuse
     1: metal
